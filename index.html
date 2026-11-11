@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teorema del mono</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #14110f;
+    --panel: #1b1714;
+    --ink: #efe6d8;
+    --muted: #8c8174;
+    --line: #2e2823;
+    --gold: #e8b04b;
+    --real: #7fc8a9;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  header {
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px 24px;
+    flex-wrap: wrap;
+  }
+  h1 { font-family: 'Special Elite', monospace; font-weight: 400; margin: 0; font-size: 1.6rem; }
+  .sub { color: var(--muted); font-size: .85rem; margin: 4px 0 0; max-width: 60ch; }
+  .hint { color: var(--muted); font-size: .8rem; white-space: nowrap; }
+  kbd {
+    font-family: inherit;
+    border: 1px solid var(--line);
+    border-bottom-width: 3px;
+    border-radius: 5px;
+    padding: 1px 7px;
+    color: var(--ink);
+    background: var(--panel);
+  }
+  .hint .auto-on { color: var(--gold); }
+
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(280px, 2fr) 3fr;
+    min-height: 0;
+  }
+
+  /* ---- Izquierda: la tecla ---- */
+  .left {
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    background: radial-gradient(ellipse at center, #1f1a16 0%, var(--bg) 70%);
+  }
+  .key {
+    width: min(68%, 340px);
+    aspect-ratio: 1;
+    border: 1px solid var(--line);
+    border-bottom-width: 10px;
+    border-radius: 22px;
+    background: var(--panel);
+    display: grid;
+    place-items: center;
+    transition: border-color .3s;
+  }
+  .key.hit { animation: hit .12s ease-out; }
+  @keyframes hit {
+    from { transform: translateY(6px); border-bottom-width: 4px; }
+    to   { transform: none; }
+  }
+  .letter {
+    font-family: 'Special Elite', monospace;
+    font-size: clamp(6rem, 17vw, 14rem);
+    line-height: 1;
+  }
+  .letter.space { color: var(--muted); }
+  .letter.idle { color: var(--muted); font-size: clamp(3rem, 8vw, 6rem); }
+  .key.gold { border-color: var(--gold); }
+  .key.gold .letter { color: var(--gold); text-shadow: 0 0 40px rgba(232,176,75,.35); }
+
+  .counter { margin-top: 32px; text-align: center; }
+  .counter .num {
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .counter .lbl {
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .18em;
+    font-size: .72rem;
+  }
+
+  /* ---- Derecha: las palabras ---- */
+  .right { display: flex; flex-direction: column; min-height: 0; }
+  .stats {
+    display: flex;
+    gap: 8px 28px;
+    flex-wrap: wrap;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--line);
+    color: var(--muted);
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+  }
+  .stats b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .stats .legend::before {
+    content: ''; display: inline-block; width: 8px; height: 8px;
+    border-radius: 50%; background: var(--real); margin-right: 6px;
+  }
+  .words {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px 40px;
+    font-size: 1rem;
+    line-height: 1.9;
+    overflow-wrap: anywhere;
+  }
+  .words .empty { color: var(--muted); font-style: italic; }
+  .w { margin-right: .7em; opacity: .62; }
+  .w.real { color: var(--real); opacity: 1; font-weight: 600; }
+  .w.current { opacity: 1; border-bottom: 2px solid var(--muted); }
+  .w.current:empty { display: none; }
+
+  .name {
+    display: block;
+    margin: 28px 0 6px;
+    font-family: 'Special Elite', monospace;
+    font-size: clamp(2rem, 4.6vw, 3.8rem);
+    line-height: 1.2;
+    color: var(--gold);
+    letter-spacing: .04em;
+    white-space: pre-wrap;
+    overflow-wrap: normal;
+    text-shadow: 0 0 30px rgba(232,176,75,.25);
+  }
+  .name::after {
+    content: '▌';
+    animation: blink 1s steps(1) infinite;
+    margin-left: 2px;
+  }
+  .name.done::after { content: none; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .signed {
+    display: block;
+    color: var(--muted);
+    margin: 0 0 28px;
+    opacity: 0;
+    transition: opacity 1.2s;
+  }
+  .signed.show { opacity: 1; }
+
+  @media (max-width: 760px) {
+    header { padding: 14px 16px; }
+    .hint { white-space: normal; }
+    main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    .left { border-right: 0; border-bottom: 1px solid var(--line); padding: 20px 16px; }
+    .key { width: min(46%, 200px); border-bottom-width: 7px; border-radius: 16px; }
+    .counter { margin-top: 16px; }
+    .stats, .words { padding-left: 16px; padding-right: 16px; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>🐒 El teorema del mono infinito</h1>
+      <p class="sub">Un mono que pulse teclas al azar durante el tiempo suficiente acabará escribiendo cualquier texto.</p>
+    </div>
+    <div class="hint">
+      Pulsa <kbd>Espacio</kbd> (o mantenla) &nbsp;·&nbsp; <kbd>A</kbd> mono automático <span id="autoState"></span>
+    </div>
+  </header>
+
+  <main>
+    <section class="left" id="left" aria-label="Pulsar tecla">
+      <div class="key" id="key">
+        <div class="letter idle" id="letter">?</div>
+      </div>
+      <div class="counter">
+        <div class="num" id="count">0</div>
+        <div class="lbl">pulsaciones</div>
+      </div>
+    </section>
+
+    <section class="right">
+      <div class="stats">
+        <span>Palabras <b id="nWords">0</b></span>
+        <span class="legend">Palabras reales <b id="nReal">0</b></span>
+      </div>
+      <div class="words" id="words" aria-live="off">
+        <span class="empty" id="empty">El mono todavía no ha escrito nada…</span>
+      </div>
+    </section>
+  </main>
+
+<script>
+(() => {
+  const TARGET = 'ERIC VERGES LASO';
+  const START = 10000;          // en la pulsación 10.000 empieza a escribirse el nombre
+  const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const SPACE_P = 0.17;          // probabilidad de que el mono pulse espacio
+  const MAX_NODES = 1500;        // palabras visibles como máximo (rendimiento)
+  const AUTO_BATCH = 120;        // pulsaciones por frame en modo automático (~1,5 s hasta 9.999)
+
+  // Palabras reales en español (2+ letras) que se resaltan si aparecen por azar
+  const REAL = new Set((
+    'DE LA EL EN UN ES SE NO YA SI MI TU SU LO LE AL YO TE NI FE HE HA VA VE OH AH ' +
+    'UNA UNO LOS LAS DEL CON POR QUE MAS SIN SUS MIS TUS NOS OS ESO ESA ESE ERA FUE HAY HOY ' +
+    'VER SER DAR IR DOS MIL PAN SOL MAR LUZ PAZ SAL VOZ MES DIA RIO OSO OJO PIE FIN RED ' +
+    'TIA TIO OLA ALA AMO AVE REY LEY TAL VAS VEO OIR GAS GOL ZOO TE TEA CAL COL DON MAL ' +
+    'BAR TOS SUR NUBE CASA MONO AMOR GATO ROSA LUNA VIDA ARTE AGUA MAPA PATO PELO MESA ' +
+    'TRES CIEN BESO MANO DEDO LOBO RATA PERA UVA OCA ASA ATE ANO ORO OTRO SANO SOLO TODO ' +
+    'NADA BIEN DIOS RISA OREJA PERRO LIBRO PLATANO MONOS LETRA AZAR ERIC'
+  ).split(/\s+/));
+
+  const $ = id => document.getElementById(id);
+  const keyEl = $('key'), letterEl = $('letter'), countEl = $('count');
+  const wordsEl = $('words'), nWordsEl = $('nWords'), nRealEl = $('nReal');
+  const emptyEl = $('empty'), autoStateEl = $('autoState');
+
+  let count = 0, nWords = 0, nReal = 0;
+  let current = '';
+  let curEl = newCurrent();
+  let nameEl = null, nameIdx = -1, done = false;
+  let auto = false, autoTimer = null;
+
+  const fmt = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+  function newCurrent() {
+    const s = document.createElement('span');
+    s.className = 'w current';
+    wordsEl.appendChild(s);
+    return s;
+  }
+
+  function finishWord() {
+    if (!current) return;
+    curEl.classList.remove('current');
+    nWords++;
+    if (REAL.has(current)) { curEl.classList.add('real'); nReal++; }
+    current = '';
+    curEl = newCurrent();
+    trim();
+  }
+
+  function trim() {
+    while (wordsEl.childElementCount > MAX_NODES) {
+      const first = wordsEl.firstElementChild;
+      if (first === nameEl || first.classList.contains('signed')) break;
+      first.remove();
+    }
+  }
+
+  function randomChar() {
+    return Math.random() < SPACE_P ? ' ' : ALPHA[(Math.random() * 26) | 0];
+  }
+
+  // Una pulsación del mono (solo lógica; el refresco de pantalla va aparte)
+  function step() {
+    count++;
+    if (emptyEl.isConnected) emptyEl.remove();
+
+    let ch, gold = false;
+
+    if (!done && count >= START) {
+      // A partir de la 10.000 el "azar" escribe el nombre
+      if (nameIdx === -1) {
+        finishWord();
+        curEl.remove();
+        nameEl = document.createElement('span');
+        nameEl.className = 'name';
+        wordsEl.appendChild(nameEl);
+        nameIdx = 0;
+      }
+      ch = TARGET[nameIdx++];
+      nameEl.textContent += ch;
+      gold = true;
+      if (nameIdx === TARGET.length) finishName();
+    } else {
+      ch = randomChar();
+      if (ch === ' ') finishWord();
+      else { current += ch; curEl.textContent = current; }
+    }
+
+    return [ch, gold];
+  }
+
+  function updateUI() {
+    countEl.textContent = fmt(count);
+    nWordsEl.textContent = fmt(nWords);
+    nRealEl.textContent = fmt(nReal);
+    wordsEl.scrollTop = wordsEl.scrollHeight;
+  }
+
+  function press() {
+    render(...step());
+    updateUI();
+  }
+
+  function finishName() {
+    done = true;
+    nameEl.classList.add('done');
+    const signed = document.createElement('span');
+    signed.className = 'signed';
+    signed.textContent = `— escrito por un mono tras ${fmt(count)} pulsaciones al azar.`;
+    wordsEl.appendChild(signed);
+    requestAnimationFrame(() => requestAnimationFrame(() => signed.classList.add('show')));
+    curEl = newCurrent();
+    if (auto) toggleAuto();
+  }
+
+  function render(ch, gold) {
+    letterEl.classList.remove('idle');
+    letterEl.classList.toggle('space', ch === ' ');
+    letterEl.textContent = ch === ' ' ? '␣' : ch;
+    keyEl.classList.toggle('gold', gold);
+    keyEl.classList.remove('hit');
+    void keyEl.offsetWidth;
+    keyEl.classList.add('hit');
+  }
+
+  // ---- Modo automático: rápido hasta el 10.000, luego letra a letra ----
+  function autoStep() {
+    if (!auto) return;
+    if (!done && count >= START - 1) {
+      press();
+      autoTimer = setTimeout(autoStep, 380);
+      return;
+    }
+    // Muchas pulsaciones por frame, pero la pantalla se refresca una sola vez
+    const batch = done ? 1 : Math.min(AUTO_BATCH, START - 1 - count);
+    let last;
+    for (let i = 0; i < batch; i++) last = step();
+    render(...last);
+    updateUI();
+    autoTimer = done ? setTimeout(autoStep, 60) : requestAnimationFrame(autoStep);
+  }
+
+  function toggleAuto() {
+    auto = !auto;
+    clearTimeout(autoTimer);
+    cancelAnimationFrame(autoTimer);
+    autoStateEl.innerHTML = auto ? '<span class="auto-on">● activo</span>' : '';
+    if (auto) autoStep();
+  }
+
+  // ---- Entrada ----
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space') {
+      e.preventDefault();
+      press();
+    } else if (e.code === 'KeyA' && !e.repeat && !e.ctrlKey && !e.metaKey) {
+      toggleAuto();
+    }
+  });
+  $('left').addEventListener('pointerdown', e => { e.preventDefault(); press(); });
+})();
+</script>
+</body>
+</html>
