@@ -1,0 +1,12 @@
+{
+  // Worker solo de estáticos: sirve dist/teorema/ en ricardverges.com/teorema
+  // No toca el Worker principal "hunter138" (que sigue sirviendo el resto del dominio).
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "teorema",
+  "compatibility_date": "2026-09-15",
+  "assets": { "directory": "./dist" },
+  "routes": [
+    { "pattern": "ricardverges.com/teorema*", "zone_name": "ricardverges.com" }
+  ],
+  "workers_dev": false
+}

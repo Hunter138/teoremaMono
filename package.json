@@ -1,0 +1,12 @@
+{
+  "name": "teorema-mono",
+  "private": true,
+  "description": "El teorema del mono infinito",
+  "scripts": {
+    "build": "rm -rf dist && mkdir -p dist/teorema && cp -r index.html fonts dist/teorema/",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "4.147.0"
+  }
+}

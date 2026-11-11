@@ -4,10 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Teorema del mono</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="preload" href="fonts/special-elite-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+  /* Fuentes alojadas en el propio sitio (@fontsource 5.3.0, licencia OFL) */
+  @font-face { font-family: 'Special Elite'; font-weight: 400; font-display: swap;
+    src: url(fonts/special-elite-latin-400-normal.woff2) format('woff2'); }
+  @font-face { font-family: 'IBM Plex Mono'; font-weight: 400; font-display: swap;
+    src: url(fonts/ibm-plex-mono-latin-400-normal.woff2) format('woff2'); }
+  @font-face { font-family: 'IBM Plex Mono'; font-weight: 600; font-display: swap;
+    src: url(fonts/ibm-plex-mono-latin-600-normal.woff2) format('woff2'); }
+
   :root {
     --bg: #14110f;
     --panel: #1b1714;
@@ -39,7 +45,22 @@
   }
   h1 { font-family: 'Special Elite', monospace; font-weight: 400; margin: 0; font-size: 1.6rem; }
   .sub { color: var(--muted); font-size: .85rem; margin: 4px 0 0; max-width: 60ch; }
-  .hint { color: var(--muted); font-size: .8rem; white-space: nowrap; }
+  .hint { color: var(--muted); font-size: .8rem; display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; }
+  .auto-btn {
+    font: inherit;
+    font-size: .85rem;
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .auto-btn:hover { border-color: var(--muted); }
+  .auto-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .auto-btn[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
   kbd {
     font-family: inherit;
     border: 1px solid var(--line);
@@ -49,7 +70,6 @@
     color: var(--ink);
     background: var(--panel);
   }
-  .hint .auto-on { color: var(--gold); }
 
   main {
     flex: 1;
@@ -184,11 +204,12 @@
 <body>
   <header>
     <div>
-      <h1>🐒 El teorema del mono infinito</h1>
+      <h1>El teorema del mono infinito</h1>
       <p class="sub">Un mono que pulse teclas al azar durante el tiempo suficiente acabará escribiendo cualquier texto.</p>
     </div>
     <div class="hint">
-      Pulsa <kbd>Espacio</kbd> (o mantenla) &nbsp;·&nbsp; <kbd>A</kbd> mono automático <span id="autoState"></span>
+      <span>Pulsa <kbd>Espacio</kbd> o toca la tecla</span>
+      <button type="button" class="auto-btn" id="autoBtn" aria-pressed="false">Mono automático</button>
     </div>
   </header>
 
@@ -237,7 +258,7 @@
   const $ = id => document.getElementById(id);
   const keyEl = $('key'), letterEl = $('letter'), countEl = $('count');
   const wordsEl = $('words'), nWordsEl = $('nWords'), nRealEl = $('nReal');
-  const emptyEl = $('empty'), autoStateEl = $('autoState');
+  const emptyEl = $('empty'), autoBtn = $('autoBtn');
 
   let count = 0, nWords = 0, nReal = 0;
   let current = '';
@@ -361,9 +382,11 @@
     auto = !auto;
     clearTimeout(autoTimer);
     cancelAnimationFrame(autoTimer);
-    autoStateEl.innerHTML = auto ? '<span class="auto-on">● activo</span>' : '';
+    autoBtn.setAttribute('aria-pressed', String(auto));
+    autoBtn.textContent = auto ? 'Parar mono' : 'Mono automático';
     if (auto) autoStep();
   }
+  autoBtn.addEventListener('click', () => { toggleAuto(); autoBtn.blur(); });
 
   // ---- Entrada ----
   document.addEventListener('keydown', e => {
@@ -374,6 +397,8 @@
       toggleAuto();
     }
   });
+  // Evita que Espacio "pulse" el botón automático si tiene el foco
+  document.addEventListener('keyup', e => { if (e.code === 'Space') e.preventDefault(); });
   $('left').addEventListener('pointerdown', e => { e.preventDefault(); press(); });
 })();
 </script>
