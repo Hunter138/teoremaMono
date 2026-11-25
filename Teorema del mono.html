@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teorema del mono</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+  /* VOICE: la misma página de ricardverges.com/teorema, sin el nombre a las 10.000
+     IDEA: una tecla de máquina de escribir que el mono aporrea
+     PICTURE: la tecla gigante con la última letra
+     COLOUR and TYPE: paleta y fuentes originales (Special Elite + IBM Plex Mono)
+     LAYOUT: tecla a la izquierda, palabras a la derecha; apilado en móvil */
+  :root {
+    color-scheme: dark;
+    --bg: #14110f;
+    --ink: #efe6d8;
+    --muted: #8c8174;
+    --line: #2e2823;
+    --panel: #1b1714;
+    --gold: #e8b04b;
+    --real: #7fc8a9;
+  }
+  * { box-sizing: border-box; min-width: 0; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  header {
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px 24px;
+    flex-wrap: wrap;
+  }
+  h1 { font-family: 'Special Elite', monospace; font-weight: 400; margin: 0; font-size: 1.6rem; }
+  .sub { color: var(--muted); font-size: .85rem; margin: 4px 0 0; max-width: 60ch; }
+  .hint { color: var(--muted); font-size: .8rem; display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; }
+  kbd {
+    font: inherit;
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-bottom-width: 3px;
+    border-radius: 6px;
+    padding: 1px 7px;
+    background: var(--panel);
+  }
+  .auto-btn {
+    font: inherit;
+    font-size: .85rem;
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .auto-btn:hover { border-color: var(--muted); }
+  .auto-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .auto-btn[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
+
+  main {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  /* ---- Izquierda: la tecla ---- */
+  .left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+    border-right: 1px solid var(--line);
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .key {
+    width: min(70%, 340px);
+    aspect-ratio: 1;
+    border: 1px solid var(--line);
+    border-bottom-width: 10px;
+    border-radius: 22px;
+    background: var(--panel);
+    display: grid;
+    place-items: center;
+    transition: border-color .3s;
+  }
+  .key.hit { animation: hit .12s ease-out; }
+  @keyframes hit {
+    from { transform: translateY(6px); border-bottom-width: 4px; }
+    to   { transform: none; }
+  }
+  .letter {
+    font-family: 'Special Elite', monospace;
+    font-size: clamp(6rem, 17vw, 14rem);
+    line-height: 1;
+  }
+  .letter.space { color: var(--muted); }
+  .letter.idle { color: var(--muted); font-size: clamp(3rem, 8vw, 6rem); }
+
+  .counter { margin-top: 32px; text-align: center; }
+  .counter .num {
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .counter .lbl {
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .18em;
+    font-size: .72rem;
+  }
+
+  /* ---- Derecha: las palabras ---- */
+  .right { display: flex; flex-direction: column; min-height: 0; }
+  .stats {
+    display: flex;
+    gap: 8px 28px;
+    flex-wrap: wrap;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--line);
+    color: var(--muted);
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+  }
+  .stats b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .stats .legend::before {
+    content: ''; display: inline-block; width: 8px; height: 8px;
+    border-radius: 50%; background: var(--real); margin-right: 6px;
+  }
+  .words {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px 40px;
+    font-size: 1rem;
+    line-height: 1.9;
+    overflow-wrap: anywhere;
+  }
+  .words .empty { color: var(--muted); font-style: italic; }
+  .w { margin-right: .7em; opacity: .62; }
+  .w.real { color: var(--real); opacity: 1; font-weight: 600; }
+  .w.current { opacity: 1; border-bottom: 2px solid var(--muted); }
+  .w.current:empty { display: none; }
+
+  /* ---- Pestañas ---- */
+  .tabs { display: flex; gap: 4px; padding: 8px 16px 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  .tab {
+    font: inherit; font-size: .82rem; color: var(--muted); background: none;
+    border: 0; border-bottom: 2px solid transparent; padding: 0 12px; min-height: 44px;
+    cursor: pointer; white-space: nowrap;
+  }
+  .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--gold); }
+  .tab:focus-visible, .pbtn:focus-visible, .rbtn:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .tab .badge { color: var(--real); margin-left: 6px; font-variant-numeric: tabular-nums; }
+  .panel { flex: 1; min-height: 0; overflow-y: auto; }
+  .panel[hidden] { display: none; }
+
+  /* ---- Lista de palabras reales ---- */
+  .rhead {
+    display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between;
+    padding: 14px 24px; color: var(--muted); font-size: .85rem; position: sticky; top: 0;
+    background: var(--bg); border-bottom: 1px solid var(--line);
+  }
+  .rhead b { color: var(--ink); }
+  .rhead small { font-size: .75rem; }
+  select, input[type=number], #pgInput {
+    font: inherit; font-size: 16px; color: var(--ink); background: var(--panel);
+    border: 1px solid var(--line); border-radius: 8px; min-height: 40px; padding: 0 10px;
+  }
+  .rlist { list-style: none; margin: 0; padding: 14px 24px 40px; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .rbtn {
+    width: 100%; font: inherit; color: var(--ink); background: var(--panel); text-align: left;
+    border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; min-height: 44px;
+    display: flex; justify-content: space-between; align-items: baseline; gap: 8px; cursor: pointer;
+  }
+  .rbtn:hover { border-color: var(--real); }
+  .rbtn .rw { color: var(--real); font-weight: 600; }
+  .rbtn .rn { color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .rempty { color: var(--muted); font-style: italic; padding: 20px 24px; }
+
+  /* ---- Texto completo ---- */
+  .pager {
+    display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center;
+    padding: 10px 16px; position: sticky; top: 0; background: var(--bg);
+    border-bottom: 1px solid var(--line); color: var(--muted); font-size: .82rem; z-index: 1;
+  }
+  .pbtn {
+    font: inherit; font-size: .9rem; color: var(--ink); background: var(--panel);
+    border: 1px solid var(--line); border-radius: 8px; min-width: 44px; min-height: 40px; padding: 0 10px; cursor: pointer;
+  }
+  .pbtn:disabled { opacity: .35; cursor: default; }
+  .pager #pgInput { width: 14ch; }
+  .pager label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; }
+  .pager .grow { flex: 1; }
+  .full {
+    padding: 18px 24px 40px; white-space: pre-wrap; overflow-wrap: anywhere;
+    line-height: 1.8; color: rgba(239,230,216,.62); font-size: .95rem;
+  }
+  .live { padding: 0; color: rgba(239,230,216,.62); }
+  .live .r, .full .r { color: var(--real); font-weight: 600; }
+  .full .target { background: var(--gold); color: var(--bg); border-radius: 3px; padding: 0 2px; }
+  .range { padding: 0 24px; color: var(--muted); font-size: .78rem; margin-top: 14px; font-variant-numeric: tabular-nums; }
+
+  /* ---- Récords arriba ---- */
+  .records {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-bottom: 1px solid var(--line);
+  }
+  .rec {
+    font: inherit; color: inherit; text-align: left; background: none; border: 0;
+    border-right: 1px solid var(--line); padding: 10px 28px 12px; cursor: pointer; min-height: 44px;
+  }
+  .rec:last-child { border-right: 0; }
+  .rec:hover { background: var(--panel); }
+  .rec:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+  .rec .k { display: block; color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; }
+  .rec .k b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .rec .v {
+    display: block; margin-top: 4px; font-family: 'Special Elite', monospace; font-size: 1.15rem;
+    line-height: 1.3; overflow-wrap: anywhere; max-height: 4em; overflow-y: auto; color: var(--gold);
+  }
+  .rec.real .v { color: var(--real); }
+  .rec .v.none { color: var(--muted); font-family: inherit; font-size: .85rem; }
+
+  .counter .top { margin-top: 18px; color: var(--muted); font-size: .85rem; }
+  .counter .top b { color: var(--real); font-weight: 600; }
+  .counter .top span { font-variant-numeric: tabular-nums; }
+
+  .search { font: inherit; font-size: 16px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; min-height: 40px; padding: 0 10px; width: 14ch; }
+  .rtools { display: flex; gap: 8px; flex-wrap: wrap; }
+  .more { display: block; margin: 0 24px 24px; }
+  .phr { margin: 0; padding: 0 24px; border-bottom: 1px solid var(--line); }
+  .phr summary { cursor: pointer; padding: 14px 0; color: var(--muted); font-size: .85rem; min-height: 44px; }
+  .phr summary b { color: var(--ink); }
+  .plist { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 6px; }
+  .plist .rbtn { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  .plist .rw { overflow-wrap: anywhere; }
+  .dict { color: var(--muted); font-size: .75rem; }
+
+  @media (max-width: 760px) {
+    header { padding: 14px 16px; }
+    main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+    .left { border-right: 0; border-bottom: 1px solid var(--line); padding: 18px; }
+    .key { width: min(46vw, 220px); border-bottom-width: 7px; border-radius: 16px; }
+    .letter { font-size: clamp(4rem, 22vw, 8rem); }
+    .counter { margin-top: 14px; }
+    .stats, .words, .rhead, .rlist, .full, .range { padding-left: 16px; padding-right: 16px; }
+    .tabs { padding-left: 8px; }
+    .records { grid-template-columns: minmax(0, 1fr); }
+    .rec { border-right: 0; border-bottom: 1px solid var(--line); padding: 8px 16px; }
+    .rec:last-child { border-bottom: 0; }
+    .phr { padding: 0 16px; }
+    .more { margin: 0 16px 24px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .key.hit { animation: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>El teorema del mono infinito</h1>
+    <p class="sub">Un mono que pulse teclas al azar durante el tiempo suficiente acabará escribiendo cualquier texto.</p>
+  </div>
+  <div class="hint">
+    <span>Pulsa <kbd>Espacio</kbd> o toca la tecla</span>
+    <button id="autoBtn" class="auto-btn" type="button" aria-pressed="false">Mono automático</button>
+  </div>
+</header>
+
+<div class="records">
+  <button class="rec real" id="recReal" type="button"><span class="k">Palabra más larga · <b id="recRealN">0</b> letras</span><span class="v none" id="recRealV">todavía ninguna</span></button>
+  <button class="rec real" id="recPhr" type="button"><span class="k">Frase más larga · <b id="recPhrN">0</b> letras</span><span class="v none" id="recPhrV">todavía ninguna</span></button>
+</div>
+
+<main>
+  <section id="left" class="left" aria-label="Tecla del mono">
+    <div id="key" class="key"><div id="letter" class="letter idle">?</div></div>
+    <div class="counter">
+      <div id="count" class="num">0</div>
+      <div class="lbl">pulsaciones</div>
+      <div class="top">Palabra más usada: <b id="topW">—</b> <span id="topN"></span></div>
+    </div>
+  </section>
+  <section class="right">
+    <div class="stats">
+      <span>Palabras <b id="nWords">0</b></span>
+      <span class="legend">Palabras reales <b id="nReal">0</b></span>
+      <span>Ritmo <b id="rate">0</b>/s</span>
+      <span title="Las palabras se cuentan en segundo plano con todos los núcleos del ordenador">Contado <b id="anPct">100 %</b> · <b id="anRate">0</b>/s</span>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tab-live" data-tab="live" aria-selected="true" type="button">En directo</button>
+      <button class="tab" role="tab" id="tab-real" data-tab="real" aria-selected="false" type="button">Palabras reales y frases<span class="badge" id="nDistinct">0</span></button>
+      <button class="tab" role="tab" id="tab-full" data-tab="full" aria-selected="false" type="button">Texto completo</button>
+    </div>
+
+    <div id="p-live" class="panel words" role="tabpanel"><span class="empty">El mono todavía no ha escrito nada…</span></div>
+
+    <div id="p-real" class="panel" role="tabpanel" hidden>
+      <div class="rhead">
+        <span><b id="rFound">0</b> de <b id="rTotal">0</b> palabras del vocabulario encontradas<br><small id="rUpTo"></small><br><small class="dict" id="dictInfo"></small></span>
+        <span class="rtools">
+          <input class="search" id="rSearch" type="search" placeholder="Buscar" aria-label="Buscar palabra" autocomplete="off">
+          <select id="rSort" aria-label="Ordenar">
+            <option value="n">Más repetidas</option>
+            <option value="len">Más largas</option>
+            <option value="az">Alfabético</option>
+            <option value="first">Por orden de aparición</option>
+          </select>
+        </span>
+      </div>
+      <details class="phr" id="phrBox" open>
+        <summary><b id="phrCount">0</b> frases con sentido (tipo «la vaca come hierba») · las de más letras</summary>
+        <ol class="plist" id="phrList"></ol>
+      </details>
+      <ol id="rList" class="rlist"></ol>
+      <p id="rEmpty" class="rempty">Aún no ha salido ninguna palabra real.</p>
+      <button class="pbtn more" id="rMore" type="button" hidden>Mostrar más</button>
+    </div>
+
+    <div id="p-full" class="panel" role="tabpanel" hidden>
+      <div class="pager">
+        <button class="pbtn" id="pgFirst" type="button" aria-label="Primera página">«</button>
+        <button class="pbtn" id="pgPrev" type="button" aria-label="Página anterior">‹</button>
+        <span>Página <input type="text" inputmode="numeric" id="pgInput" value="1" aria-label="Número de página"> de <b id="pgTotal">1</b></span>
+        <button class="pbtn" id="pgNext" type="button" aria-label="Página siguiente">›</button>
+        <button class="pbtn" id="pgLast" type="button" aria-label="Última página">»</button>
+        <span class="grow"></span>
+        <label><input type="checkbox" id="follow" checked> Seguir al mono</label>
+        <button class="pbtn" id="copyBtn" type="button">Copiar página</button>
+      </div>
+      <p class="range" id="pgRange"></p>
+      <div id="fullText" class="full"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+{
+  const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  // Cada número aleatorio da 6 teclas de 5 bits: 26 letras + 6 valores de espacio (18,75 %)
+  const PER_SECOND = 1e15;         // tope: un millón por nanosegundo (en la práctica manda el conteo)
+  const PAGE = 10000n;             // caracteres por página del texto completo
+  const LIVE_CHARS = 4000n;        // cola del texto que se ve en directo
+  const CHUNK = 10000000;          // pulsaciones por encargo a cada núcleo (equilibrio entre fluidez y velocidad)
+  const MARGIN = 1000;             // margen para que las palabras de un trozo terminen
+  const LIST_STEP = 300;           // palabras por tanda en la lista
+  const TOP_PHRASES = 50;          // frases más largas que se guardan
+  // ---- Vocabulario común del español, con su gramática (sin tildes; Ñ como N)
+  // Bits de cada palabra: categoría, género y número
+  const T_DET = 1, T_NOUN = 2, T_VERB = 4, T_ADJ = 8, T_PREP = 16, T_ADV = 32, T_NEG = 64,
+        T_PRON = 128, T_PDET = 256, T_CONJ = 512, T_COP = 1024,
+        T_M = 2048, T_F = 4096, T_SG = 8192, T_PL = 16384, T_MF = 2048 | 4096;
+  const words = s => s.trim().split(/\s+/);
+  const plural = w => /[AEIOU]$/.test(w) ? w + 'S' : /Z$/.test(w) ? w.slice(0, -1) + 'CES' : w + 'ES';
+
+  const LEX = new Map();
+  const add = (w, t) => LEX.set(w, (LEX.get(w) || 0) | t);
+
+  for (const [w, t] of [['EL', T_M | T_SG], ['LA', T_F | T_SG], ['LOS', T_M | T_PL], ['LAS', T_F | T_PL],
+    ['UN', T_M | T_SG], ['UNA', T_F | T_SG], ['UNOS', T_M | T_PL], ['UNAS', T_F | T_PL],
+    ['MI', T_MF | T_SG], ['TU', T_MF | T_SG], ['SU', T_MF | T_SG], ['MIS', T_MF | T_PL], ['TUS', T_MF | T_PL], ['SUS', T_MF | T_PL],
+    ['ESTE', T_M | T_SG], ['ESTA', T_F | T_SG], ['ESTOS', T_M | T_PL], ['ESTAS', T_F | T_PL],
+    ['ESE', T_M | T_SG], ['ESA', T_F | T_SG], ['ESOS', T_M | T_PL], ['ESAS', T_F | T_PL]]) add(w, T_DET | t);
+  for (const [w, t] of [['EL', T_M | T_SG], ['ELLA', T_F | T_SG], ['ELLOS', T_M | T_PL], ['ELLAS', T_F | T_PL]]) add(w, T_PRON | t);
+
+  const NOUN_M = words(`CONEJO CAMELLO BUHO DELFIN TIBURON GUSANO CANGREJO CARACOL MOSQUITO LORO PINGUINO ZORRO TIGRE
+    ELEFANTE COCODRILO DINOSAURIO DRAGON MONSTRUO PULPO ANIMAL AIRE ANILLO AUTOBUS AZUCAR BANCO BARRIO BEBE BESO BIGOTE
+    BOLIGRAFO BOTON CABELLO CAJON CALOR CAMION CANAL CARRO CASTILLO CEREBRO CHOCOLATE CINE CIRCO CLIMA COHETE COLEGIO
+    COLOR CORAZON CUADRO CUELLO CUENTO CUERPO DEPORTE DESAYUNO DIBUJO DIENTE DOCTOR EDIFICIO ERROR ESPEJO EXAMEN FARO
+    FRIO FUTBOL GLOBO GRUPO HELADO HOSPITAL HOTEL HUMO IDIOMA INVIERNO JABON JAMON JEFE LADRON LAGO LUGAR MANTEL
+    MERCADO METAL MINUTO MOMENTO MUSEO NIDO NOMBRE NUMERO OCEANO OTONO PAIS PANTALON PASEO PASILLO PEINE PERIODICO
+    PIRATA PLANETA POSTRE PREMIO PRIMO PROBLEMA PROFESOR REGALO RELOJ RESTAURANTE RUIDO SALON SECRETO SENOR SILENCIO
+    SOFA SOLDADO SUELO TALLER TECLADO TELEFONO TEMA TESORO TRABAJO TRACTOR VALLE VECINO VERANO VESTIDO VIAJE VIDRIO
+    VOLCAN PLATANO BOCADILLO PASTEL CARAMELO CAZO CUBO TAMBOR PIANO VIOLIN ESCRITORIO ORDENADOR JUGUETE PAYASO
+    GATO PERRO OSO LOBO TORO BURRO CERDO PATO PEZ RATON LEON MONO CABALLO POLLO GALLO PAJARO SAPO
+    NINO HOMBRE CHICO REY PADRE HIJO AMIGO HERMANO ABUELO MEDICO MAESTRO PAN QUESO VINO ARROZ PASTO MAIZ HUEVO TOMATE
+    LIBRO COCHE TREN BARCO AVION SOL MAR RIO CIELO MONTE CAMPO BOSQUE ARBOL MAPA PIE OJO DEDO BRAZO PELO DIA MES MUNDO
+    PUEBLO CAMINO PUERTO JARDIN PATIO TECHO MURO VASO PLATO PALO SACO ZAPATO SOMBRERO TRAJE FUEGO HIELO VIENTO RAYO
+    MIEDO AMOR TIEMPO JUEGO BALON GOL DINERO ORO HIERRO PAPEL LAPIZ TE CAFE LIMON MELON AJO PARQUE`);
+  const NOUN_F = words(`ARDILLA BALLENA CEBRA JIRAFA HORMIGA MARIPOSA ORUGA PALOMA SERPIENTE TORTUGA FOCA BANANA BARBA
+    BASURA BICICLETA BOMBA BOTELLA BRUJA BUFANDA CABEZA CADENA CAMPANA CARRETERA CEBOLLA CERVEZA CHAQUETA CLASE COCINA
+    COPA CORONA CORTINA CUEVA DUCHA ESCALERA ESCUELA ESPADA ESPALDA FAMILIA FRESA GALLETA GARGANTA GORRA GUITARRA
+    HABITACION HAMBURGUESA HISTORIA HORA IDEA IGLESIA LAGRIMA LAMPARA LECHUGA LENGUA LETRA LIBRETA LINEA MALETA MANTA
+    MASCOTA MEMORIA MONEDA MUNECA NARANJA NAVE NEVERA NOTICIA NOVELA OLLA PALABRA PANTALLA PARED PATATA PECERA PELICULA
+    PERSONA PIERNA PISCINA PIZZA PLANTA PLAZA PLUMA PREGUNTA PRINCESA PROFESORA RADIO RATA RAIZ REGLA RESPUESTA REVISTA
+    RODILLA RUEDA SANDIA SARTEN SEMANA SIRENA SOMBRA TARTA TELA TIENDA TIJERA TORMENTA TORRE TOSTADA VELA VERDAD
+    ZANAHORIA ZAPATILLA ESCOBA GRANJA BRUJULA NUEZ ALMOHADA SABANA MAQUINA RUTA PLAYA
+    VACA CABRA OVEJA GALLINA GATA PERRA RANA ABEJA MOSCA NINA MUJER CHICA MADRE HIJA AMIGA HERMANA
+    ABUELA REINA CASA MESA SILLA CAMA PUERTA VENTANA CALLE CIUDAD PLAYA LUNA ESTRELLA NUBE LLUVIA NIEVE FLOR HOJA ROSA
+    FRUTA MANZANA PERA UVA LECHE SOPA CARNE SAL HIERBA PIEDRA ARENA TIERRA NOCHE TARDE MANO BOCA CARA NARIZ OREJA PIEL
+    VIDA GUERRA PAZ LUZ VOZ CARTA FOTO MOTO PELOTA MUSICA CANCION RISA FIESTA COMIDA CENA ROPA FALDA CAMISA BOTA LLAVE
+    CAJA BOLSA TAZA CUCHARA MIEL PATA COLA ISLA SELVA`);
+  for (const n of NOUN_M) { add(n, T_NOUN | T_M | T_SG); add(plural(n), T_NOUN | T_M | T_PL); }
+  for (const n of NOUN_F) { add(n, T_NOUN | T_F | T_SG); add(plural(n), T_NOUN | T_F | T_PL); }
+
+  const ADJ_O = words(`ABURRIDO ANCHO ANTIGUO ASUSTADO BLANDO BRAVO CALVO CARO CIEGO CLARO CURIOSO DELGADO DIVERTIDO
+    DORMIDO DURO ENFADADO ENFERMO ESTRECHO EXTRANO FAMOSO FRESCO FRIO GENEROSO HERMOSO HONDO LIGERO LLENO MAGICO MORADO
+    NERVIOSO OSCURO PEQUENO PERFECTO PESADO PRECIOSO QUIETO RARO REDONDO ROTO RUBIO SALADO SECO SERIO SIMPATICO TIMIDO
+    TRANQUILO VACIO VIVO ULTIMO PRIMERO ROSADO HAMBRIENTO
+    BUENO MALO ALTO BAJO GORDO FLACO NEGRO BLANCO ROJO RICO LISTO TONTO GUAPO FEO BONITO NUEVO VIEJO
+    LARGO CORTO LOCO SANO CANSADO CONTENTO MOJADO SUCIO LIMPIO RAPIDO LENTO AMARILLO`);
+  const ADJ_E = words(`GRANDE VERDE TRISTE FUERTE ALEGRE DULCE AZUL FELIZ GRIS JOVEN CALIENTE ELEGANTE ENORME FACIL
+    DIFICIL IMPORTANTE INTELIGENTE LIBRE POBRE AMABLE VALIENTE MARRON FEROZ VELOZ`);
+  for (const a of ADJ_O) {
+    const s = a.slice(0, -1);
+    add(s + 'O', T_ADJ | T_M | T_SG); add(s + 'A', T_ADJ | T_F | T_SG);
+    add(s + 'OS', T_ADJ | T_M | T_PL); add(s + 'AS', T_ADJ | T_F | T_PL);
+  }
+  for (const a of ADJ_E) { add(a, T_ADJ | T_MF | T_SG); add(plural(a), T_ADJ | T_MF | T_PL); }
+
+  // Verbos en presente, tercera persona (él come / ellos comen)
+  const V_AR = words(`AMAR MIRAR CANTAR BAILAR SALTAR NADAR TOMAR LLEVAR BUSCAR GANAR ANDAR LLORAR GRITAR PISAR PINTAR
+    LAVAR CORTAR ROBAR CAZAR CUIDAR ESPERAR USAR TOCAR BESAR ABRAZAR CAMINAR COCINAR LLAMAR HABLAR MANDAR PASAR SACAR
+    TIRAR VISITAR AYUDAR ESTUDIAR TRABAJAR DESCANSAR PREPARAR COMPRAR ACABAR ADIVINAR ARREGLAR BAJAR BORRAR BRILLAR
+    CALLAR CAMBIAR CARGAR CELEBRAR CENAR CHUPAR CONTESTAR CREAR CURAR DESAYUNAR DIBUJAR EMPUJAR ENSENAR ENTRAR ESCUCHAR
+    ESTORNUDAR FIRMAR GASTAR GUARDAR GUSTAR INVENTAR JUNTAR LANZAR LIMPIAR LLEGAR LLENAR MANCHAR MARCAR MEJORAR
+    NECESITAR OLVIDAR ORDENAR PAGAR PARAR PEINAR PESCAR PLANTAR PREGUNTAR QUEMAR REGALAR RESPIRAR SALUDAR SECAR SILBAR
+    SOPLAR SUDAR TERMINAR TRAGAR VIAJAR AVISAR ARRASTRAR ATRAPAR BOSTEZAR RONCAR MASTICAR DUCHAR COPIAR`);
+  const V_ER = words(`COMER BEBER CORRER VENDER APRENDER TEMER ROMPER COSER BARRER LAMER METER COMPRENDER CONOCER CRECER
+    DEBER ESCONDER OFRECER PROTEGER RECOGER RESPONDER SORPRENDER TOSER NACER PARECER TEJER`);
+  const V_IR = words(`VIVIR ABRIR ESCRIBIR SUBIR PARTIR SUFRIR COMPARTIR CUMPLIR DECIDIR DESCUBRIR DIVIDIR EXISTIR
+    IMPRIMIR RECIBIR REPARTIR RESISTIR UNIR ESCUPIR`);
+  for (const v of V_AR) { const s = v.slice(0, -2); add(s + 'A', T_VERB | T_SG); add(s + 'AN', T_VERB | T_PL); }
+  for (const v of [...V_ER, ...V_IR]) { const s = v.slice(0, -2); add(s + 'E', T_VERB | T_SG); add(s + 'EN', T_VERB | T_PL); }
+  for (const [sg, pl, cop] of [['ES', 'SON', 1], ['ESTA', 'ESTAN', 1], ['VA', 'VAN'], ['DA', 'DAN'], ['VE', 'VEN'],
+    ['LEE', 'LEEN'], ['OYE', 'OYEN'], ['TIENE', 'TIENEN'], ['HACE', 'HACEN'], ['QUIERE', 'QUIEREN'], ['PUEDE', 'PUEDEN'],
+    ['SABE', 'SABEN'], ['TRAE', 'TRAEN'], ['MUERDE', 'MUERDEN'], ['HUELE', 'HUELEN'], ['MUEVE', 'MUEVEN'],
+    ['DUERME', 'DUERMEN'], ['PIDE', 'PIDEN'], ['SIENTE', 'SIENTEN'], ['SALE', 'SALEN'], ['VIENE', 'VIENEN'],
+    ['DICE', 'DICEN'], ['SIGUE', 'SIGUEN'], ['JUEGA', 'JUEGAN'], ['VUELA', 'VUELAN'], ['CUENTA', 'CUENTAN'], ['RIE', 'RIEN'],
+    ['CUELGA', 'CUELGAN'], ['ENCUENTRA', 'ENCUENTRAN'], ['PIENSA', 'PIENSAN'], ['PRUEBA', 'PRUEBAN'], ['RIEGA', 'RIEGAN'],
+    ['PIERDE', 'PIERDEN'], ['VUELVE', 'VUELVEN'], ['ENCIENDE', 'ENCIENDEN'], ['DEFIENDE', 'DEFIENDEN'], ['MUERE', 'MUEREN'],
+    ['HIERVE', 'HIERVEN'], ['MIENTE', 'MIENTEN'], ['SIRVE', 'SIRVEN'], ['REPITE', 'REPITEN'], ['VISTE', 'VISTEN'],
+    ['CONSTRUYE', 'CONSTRUYEN'], ['HUYE', 'HUYEN'], ['DESTRUYE', 'DESTRUYEN'], ['SUENA', 'SUENAN'], ['LLUEVE', 'LLUEVEN']]) {
+    add(sg, T_VERB | T_SG | (cop ? T_COP : 0)); add(pl, T_VERB | T_PL | (cop ? T_COP : 0));
+  }
+  // Otras formas de los verbos regulares: infinitivo, yo, tú, nosotros
+  for (const v of V_AR) { const s = v.slice(0, -2); for (const w of [v, s + 'O', s + 'AS', s + 'AMOS']) add(w, 0); }
+  for (const v of V_ER) {
+    const s = v.slice(0, -2);
+    // yo: parezco, conozco, protejo, recojo
+    const yo = /CER$/.test(v) ? s.slice(0, -1) + 'ZCO' : /GER$/.test(v) ? s.slice(0, -1) + 'JO' : s + 'O';
+    for (const w of [v, yo, s + 'ES', s + 'EMOS']) add(w, 0);
+  }
+  for (const v of V_IR) { const s = v.slice(0, -2); for (const w of [v, s + 'O', s + 'ES', s + 'IMOS']) add(w, 0); }
+  for (const w of words(`SER ESTAR IR DAR VER LEER OIR TENER HACER QUERER PODER SABER TRAER MORDER OLER MOVER DORMIR PEDIR
+    SENTIR SALIR VENIR DECIR SEGUIR JUGAR VOLAR CONTAR REIR SOY ERES SOMOS ESTOY ESTAS ESTAMOS TENGO TIENES TENEMOS VOY
+    VAS VAMOS DOY DAS DAMOS VEO VES VEMOS HAGO HACES QUIERO QUIERES PUEDO PUEDES SE SABES DIGO DICES SALGO VENGO JUEGO
+    ERA ERAN FUE FUERON HAY HABIA YO NOSOTROS NOSOTRAS VOSOTROS VOSOTRAS USTED USTEDES ME TE SE NOS OS LE LES LO
+    UNO DOS TRES CUATRO CINCO SEIS SIETE OCHO NUEVE DIEZ ONCE DOCE VEINTE CIEN MIL QUE COMO CUANDO DONDE QUIEN
+    PORQUE SI TODO TODA TODOS TODAS NADA ALGO NADIE ALGUIEN OTRO OTRA OTROS OTRAS MISMO MISMA GRACIAS HOLA ADIOS
+    AYER MANANA ANTES DESPUES LUEGO AHORA ENTONCES CASI SOLO TAN TANTO MENOS MEJOR PEOR LEJOS CERCA ARRIBA ABAJO
+    DENTRO FUERA DELANTE DETRAS ENTRE SEGUN CONTRA MIENTRAS AUNQUE SINO`)) add(w, 0);
+  for (const w of words('A DE EN CON POR SIN PARA SOBRE BAJO DESDE HACIA HASTA')) add(w, T_PREP);
+  for (const w of words('AL DEL')) add(w, T_PDET | T_M | T_SG);
+  for (const w of words('BIEN MAL HOY MUCHO POCO AQUI ALLI YA SIEMPRE NUNCA TAMBIEN MUY MAS PRONTO')) add(w, T_ADV);
+  add('NO', T_NEG);
+  for (const w of words('Y O E U NI PERO')) add(w, T_CONJ);
+
+  // ---- Gramática: [artículo + nombre (+ adjetivo) | pronombre] + (no) + verbo + (complemento)
+  // Devuelve [inicio, fin) de cada frase con sentido dentro de una lista de etiquetas
+  function findSentences(t) {
+    const DET = 1, NOUN = 2, VERB = 4, ADJ = 8, PREP = 16, ADV = 32, NEG = 64, PRON = 128, PDET = 256, COP = 1024;
+    const G = 2048 | 4096, N = 8192 | 16384;
+    const agree = (a, b) => (a & b & G) && (a & b & N);
+    const np = i => {
+      if (i >= t.length) return null;
+      if ((t[i] & DET) && i + 1 < t.length && (t[i + 1] & NOUN) && agree(t[i], t[i + 1])) {
+        const f = t[i] & t[i + 1] & (G | N);
+        let j = i + 2;
+        if (j < t.length && (t[j] & ADJ) && agree(f, t[j])) j++;
+        return { j, f, pron: false };
+      }
+      if (t[i] & PRON) return { j: i + 1, f: t[i] & (G | N), pron: true };
+      return null;
+    };
+    const bare = j => {   // nombre sin artículo: "come HIERBA"
+      if (j < t.length && (t[j] & NOUN)) {
+        let k = j + 1;
+        if (k < t.length && (t[k] & ADJ) && agree(t[j], t[k])) k++;
+        return k;
+      }
+      return -1;
+    };
+    const comp = (j, subj, cop) => {
+      if (j >= t.length) return j;
+      if (cop) {
+        if ((t[j] & ADJ) && agree(subj, t[j])) return j + 1;
+        if ((t[j] & ADV) && j + 1 < t.length && (t[j + 1] & ADJ) && agree(subj, t[j + 1])) return j + 2;
+      }
+      const o = np(j); if (o && !o.pron) return o.j;
+      const b = bare(j); if (b > 0) return b;
+      if (t[j] & PREP) { const o2 = np(j + 1); if (o2 && !o2.pron) return o2.j; const b2 = bare(j + 1); if (b2 > 0) return b2; }
+      if ((t[j] & PDET) && j + 1 < t.length && (t[j + 1] & NOUN) && agree(t[j], t[j + 1])) {
+        let k = j + 2;
+        if (k < t.length && (t[k] & ADJ) && agree(t[j + 1], t[k])) k++;
+        return k;
+      }
+      if (t[j] & ADV) return j + 1;
+      return j;
+    };
+    const out = [];
+    let i = 0;
+    while (i < t.length) {
+      const s = np(i);
+      let e = -1;
+      if (s) {
+        let j = s.j;
+        if (j < t.length && (t[j] & NEG)) j++;
+        if (j < t.length && (t[j] & VERB) && (t[j] & s.f & N)) {
+          e = comp(j + 1, s.f, t[j] & COP);
+          if ((t[j] & COP) && e === j + 1) e = -1;   // "es" o "está" necesitan algo detrás
+        }
+      }
+      if (e - i >= 3) { out.push([i, e]); i = e; } else i++;
+    }
+    return out;
+  }
+
+  // Palabra -> número en base 27 (exacto hasta 11 letras)
+  const enc = w => { let c = 0; for (let i = 0; i < w.length; i++) c = c * 27 + (w.charCodeAt(i) - 64); return c; };
+  const dec = c => { let s = ''; while (c > 0) { const d = c % 27; s = String.fromCharCode(64 + d) + s; c = (c - d) / 27; } return s; };
+
+  // ---- El azar del mono: la tecla n.º i siempre es la misma en esta partida
+  const SEED = (Math.random() * 4294967296) >>> 0;
+  function hash(i) {
+    const lo = i >>> 0, hi = (i / 4294967296) >>> 0;
+    let x = Math.imul(lo ^ SEED, 0x85ebca6b) ^ Math.imul(hi + 0x9e3779b9, 0xc2b2ae35);
+    x ^= x >>> 16; x = Math.imul(x, 0x85ebca6b);
+    x ^= x >>> 13; x = Math.imul(x, 0xc2b2ae35);
+    x ^= x >>> 16;
+    return x >>> 0;
+  }
+  // Igual que hash() pero con el bloque partido en tres trozos de 32 bits, para posiciones enormes.
+  // Con hi2 = 0 da exactamente lo mismo que hash() (lo que usan los núcleos).
+  function hash3(lo, hi, hi2) {
+    let x = Math.imul(lo ^ SEED, 0x85ebca6b) ^ Math.imul(hi + 0x9e3779b9, 0xc2b2ae35);
+    if (hi2) x ^= Math.imul(hi2, 0x27d4eb2d);
+    x ^= x >>> 16; x = Math.imul(x, 0x85ebca6b);
+    x ^= x >>> 13; x = Math.imul(x, 0xc2b2ae35);
+    x ^= x >>> 16;
+    return x >>> 0;
+  }
+  const M32 = 0xFFFFFFFFn;
+  // Texto entre las pulsaciones a y b (números normales o BigInt, sin límite de tamaño)
+  function textAt(a, b) {
+    a = BigInt(a); b = BigInt(b);
+    if (b <= a) return '';
+    const k = a / 6n;
+    let j = Number(a - k * 6n), n = Number(b - a);
+    let lo = Number(k & M32), hi = Number((k >> 32n) & M32), hi2 = Number((k >> 64n) & M32);
+    let h = hash3(lo, hi, hi2) >>> (5 * j), s = '';
+    while (n-- > 0) {
+      const c = h & 31;
+      s += c >= 26 ? ' ' : ALPHA[c];
+      h >>>= 5;
+      if (++j === 6) {
+        j = 0;
+        lo = (lo + 1) >>> 0;
+        if (lo === 0) { hi = (hi + 1) >>> 0; if (hi === 0) hi2 = (hi2 + 1) >>> 0; }
+        h = hash3(lo, hi, hi2);
+      }
+    }
+    return s;
+  }
+  const charAt = i => textAt(i, BigInt(i) + 1n);
+
+  // ---- Diccionario en tablas compactas (las comparten los workers)
+  let DICT = null;
+  function bsearch(arr, x) {
+    let lo = 0, hi = arr.length - 1;
+    while (lo <= hi) { const m = (lo + hi) >> 1, v = arr[m]; if (v === x) return true; if (v < x) lo = m + 1; else hi = m - 1; }
+    return false;
+  }
+  function buildDict(list) {
+    const set = new Set();
+    for (const w0 of list) {
+      const w = String(w0).toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      if (w.length >= 4 && /^[A-Z]+$/.test(w)) set.add(w);
+    }
+    for (const w of LEX.keys()) set.add(w);
+    const WORD4 = new Uint8Array(531441), PRE4 = new Uint8Array(531441), PFX = new Uint8Array(531441);
+    const mid = [], long = [];
+    for (const w of set) for (let L = 1; L <= Math.min(4, w.length); L++) PFX[enc(w.slice(0, L))] = 1;
+    let maxLen = 0;
+    for (const w of set) {
+      if (w.length > maxLen) maxLen = w.length;
+      if (w.length <= 4) WORD4[enc(w)] = 1;
+      else { PRE4[enc(w.slice(0, 4))] = 1; if (w.length <= 11) mid.push(enc(w)); else long.push(w); }
+    }
+    const MID = Float64Array.from(mid).sort();
+    return { size: set.size, maxLen, WORD4, PRE4, PFX, MID, LONG: long, LONGSET: new Set(long) };
+  }
+  function isWordStr(s) {
+    if (!DICT || !s || s.length > DICT.maxLen) return false;
+    if (s.length <= 4) return DICT.WORD4[enc(s)] === 1;
+    if (!DICT.PRE4[enc(s.slice(0, 4))]) return false;
+    if (s.length <= 11) return bsearch(DICT.MID, enc(s));
+    return DICT.LONGSET.has(s);
+  }
+
+  // ---- Contador en segundo plano (un worker por núcleo)
+  const WORKER_SRC = `
+    let SEED, WORD4, PRE4, PFX, MID, LONG, MAXLEN, TAGS;
+    ${findSentences.toString()}
+    const G = 0x02108421;          // bit 0 de cada grupo de 5 bits (6 teclas por número)
+    const TOP = ${TOP_PHRASES};
+    function hash(k) {
+      const lo = k >>> 0, hi = (k / 4294967296) >>> 0;
+      let x = Math.imul(lo ^ SEED, 0x85ebca6b) ^ Math.imul(hi + 0x9e3779b9, 0xc2b2ae35);
+      x ^= x >>> 16; x = Math.imul(x, 0x85ebca6b);
+      x ^= x >>> 13; x = Math.imul(x, 0xc2b2ae35);
+      x ^= x >>> 16;
+      return x >>> 0;
+    }
+    const cAt = i => { const k = Math.floor(i / 6); return (hash(k) >>> (5 * (i - k * 6))) & 31; };
+    const spaces = x => (x >>> 4) & (x >>> 3) & ((x >>> 2) | (x >>> 1)) & G;
+    // posición (0-5) de un bit de grupo a partir de clz32, sin dividir
+    const JP = new Int8Array(33); for (let b = 0; b < 32; b++) JP[31 - b] = (b / 5) | 0;
+    const L12 = new Int32Array(14);   // las 12 letras del bloque y del siguiente
+    let ch0 = 0, ch1 = 0;            // bloque en caché y el siguiente
+    // Contadores fijos para las palabras de hasta 4 letras (las más frecuentes)
+    const CNT4 = new Uint32Array(531441), FIRST4 = new Float64Array(531441);
+    let touched = [];
+    let base = 0;                    // posición del primer carácter del bloque en caché
+    function getC(pos) {
+      const r = pos - base;
+      if (r >= 0 && r < 6) return (ch0 >>> (5 * r)) & 31;
+      if (r >= 6 && r < 12) return (ch1 >>> (5 * (r - 6))) & 31;
+      const k = Math.floor(pos / 6);
+      return (hash(k) >>> (5 * (pos - k * 6))) & 31;
+    }
+    function bs(x) {
+      let lo = 0, hi = MID.length - 1;
+      while (lo <= hi) { const m = (lo + hi) >> 1, v = MID[m]; if (v === x) return true; if (v < x) lo = m + 1; else hi = m - 1; }
+      return false;
+    }
+    // ¿Es palabra del diccionario? Devuelve su clave o null
+    function realKey(p, len) {
+      if (len > MAXLEN) return null;
+      let code = 0;
+      if (len <= 4) { for (let t = 0; t < len; t++) code = code * 27 + getC(p + t) + 1; return WORD4[code] ? code : null; }
+      for (let t = 0; t < 4; t++) code = code * 27 + getC(p + t) + 1;
+      if (!PRE4[code]) return null;
+      if (len <= 11) { for (let t = 4; t < len; t++) code = code * 27 + getC(p + t) + 1; return bs(code) ? code : null; }
+      let s = '';
+      for (let t = 0; t < len; t++) s += String.fromCharCode(65 + getC(p + t));
+      return LONG.has(s) ? s : null;
+    }
+    // racha de palabras reales en curso: [etiqueta, posición, letras, ...] sin crear memoria nueva
+    let RUN = new Float64Array(3 * 1024), runLen = 0;
+    function newState() {
+      runLen = 0;
+      return { words: 0, recs: new Map(), maxLen: 0, maxPos: -1, maxRealLen: 0, maxRealPos: -1,
+               seenNon: false, lead: [], phrases: 0, top: [] };
+    }
+    // Las frases se ordenan por letras (luego por palabras)
+    function addPhrase(st, n, a, b, L) {
+      st.phrases++;
+      const t = st.top;
+      if (t.length >= TOP) { const l = t[t.length - 1]; if (L < l[3] || (L === l[3] && n <= l[0])) return; }
+      t.push([n, a, b, L]);
+      t.sort((x, y) => y[3] - x[3] || y[0] - x[0]);
+      if (t.length > TOP) t.pop();
+    }
+    // Busca frases con sentido en una racha de palabras reales [etiqueta, posición, letras, ...]
+    function parseRun(st, arr, n) {
+      const tags = [];
+      for (let k = 0; k < n; k += 3) tags.push(arr[k]);
+      for (const [i, e] of findSentences(tags)) {
+        let L = 0;
+        for (let k = i; k < e; k++) L += arr[3 * k + 2];
+        addPhrase(st, e - i, arr[3 * i + 1], arr[3 * (e - 1) + 1] + arr[3 * (e - 1) + 2], L);
+      }
+    }
+    function onReal(st, key, p, len) {
+      if (len <= 4) {
+        if (CNT4[key]++ === 0) { FIRST4[key] = p; touched.push(key); }
+      } else {
+        const r = st.recs.get(key);
+        if (r) r[0]++; else st.recs.set(key, [1, p]);
+      }
+      if (len > st.maxRealLen) { st.maxRealLen = len; st.maxRealPos = p; }
+      const tg = TAGS.get(key) || 0;
+      if (st.seenNon) {
+        if (runLen + 3 > RUN.length) { const r2 = new Float64Array(RUN.length * 2); r2.set(RUN); RUN = r2; }
+        RUN[runLen++] = tg; RUN[runLen++] = p; RUN[runLen++] = len;
+      } else st.lead.push(tg, p, len);
+    }
+    function onNonReal(st) {
+      if (!st.seenNon) st.seenNon = true;
+      else if (runLen) {
+        if (runLen >= 9) parseRun(st, RUN, runLen);
+        runLen = 0;
+      }
+    }
+    function onWord(st, p, len) {
+      st.words++;
+      const key = realKey(p, len);
+      if (key !== null) onReal(st, key, p, len); else onNonReal(st);
+    }
+    // Trozo normal: palabras que EMPIEZAN en [a, b); espacios e inicios de 6 en 6 con bits
+    function scanFast(a, b, end) {
+      const st = newState();
+      const k0 = Math.floor(a / 6), k1 = Math.floor((b - 1) / 6);
+      const firstOff = a - k0 * 6, lastOff = (b - 1) - k1 * 6;
+      let prevSpace = a === 0 ? 1 : (cAt(a - 1) >= 26 ? 1 : 0);
+      let h = hash(k0), S = spaces(h);
+      for (let k = k0; k <= k1; k++) {
+        const hn = hash(k + 1), Sn = spaces(hn);
+        L12[0] = h & 31; L12[1] = (h >>> 5) & 31; L12[2] = (h >>> 10) & 31; L12[3] = (h >>> 15) & 31; L12[4] = (h >>> 20) & 31; L12[5] = (h >>> 25) & 31;
+        L12[6] = hn & 31; L12[7] = (hn >>> 5) & 31; L12[8] = (hn >>> 10) & 31; L12[9] = (hn >>> 15) & 31; L12[10] = (hn >>> 20) & 31; L12[11] = (hn >>> 25) & 31;
+        let starts = (~S & G) & ((S << 5) | prevSpace);
+        prevSpace = (S >>> 25) & 1;
+        if (k === k0) starts &= ~((1 << (5 * firstOff)) - 1);
+        if (k === k1 && lastOff < 5) starts &= (1 << (5 * (lastOff + 1))) - 1;
+        while (starts) {
+          const bit = starts & -starts; starts ^= bit;
+          const j = JP[Math.clz32(bit)];
+          const after = S & ~((bit << 1) - 1);
+          let len;
+          if (after) len = JP[Math.clz32(after & -after)] - j;
+          else if (Sn) len = 6 - j + JP[Math.clz32(Sn & -Sn)];
+          else { let pos = (k + 2) * 6; while (pos < end && cAt(pos) < 26) pos++; len = pos - (k * 6 + j); }
+          st.words++;
+          // ¿palabra real? Se descarta en cuanto sus primeras letras no empiezan ninguna palabra
+          let key = null;
+          if (len <= MAXLEN) {
+            const lim = len < 4 ? len : 4;
+            let code = 0, t = 0, pos = j;
+            for (; t < lim; t++, pos++) {
+              code = code * 27 + (pos < 12 ? L12[pos] : cAt(k * 6 + pos)) + 1;
+              if (!PFX[code]) break;
+            }
+            if (t === lim) {
+              if (len <= 4) { if (WORD4[code]) key = code; }
+              else if (PRE4[code]) { base = k * 6; ch0 = h | 0; ch1 = hn | 0; key = realKey(k * 6 + j, len); }
+            }
+          }
+          if (key !== null) onReal(st, key, k * 6 + j, len); else onNonReal(st);
+        }
+        h = hn; S = Sn;
+      }
+      return finish(st, b);
+    }
+    // Trozo final: letra a letra; una palabra a medio escribir no se cuenta todavía
+    function scanTail(a, b, end) {
+      const st = newState();
+      let i = a, stop = b;
+      base = -100;
+      if (a > 0 && cAt(a - 1) < 26) while (i < end && cAt(i) < 26) i++;
+      while (i < b) {
+        if (cAt(i) >= 26) { i++; continue; }
+        const p = i;
+        while (i < end && cAt(i) < 26) i++;
+        if (i >= end) { stop = p; break; }
+        onWord(st, p, i - p);
+      }
+      return finish(st, stop);
+    }
+    function finish(st, stop) {
+      const flat = [];
+      for (const key of touched) { flat.push(key, CNT4[key], FIRST4[key]); CNT4[key] = 0; }
+      touched = [];
+      for (const [key, r] of st.recs) flat.push(key, r[0], r[1]);
+      return { stop, words: st.words, flat, maxLen: st.maxLen, maxPos: st.maxPos,
+               maxRealLen: st.maxRealLen, maxRealPos: st.maxRealPos,
+               phrases: st.phrases, top: st.top, allReal: !st.seenNon, lead: st.lead,
+               trail: st.seenNon ? Array.from(RUN.subarray(0, runLen)) : null };
+    }
+    onmessage = e => {
+      const d = e.data;
+      if (d.init) {
+        SEED = d.seed; WORD4 = d.WORD4; PRE4 = d.PRE4; PFX = d.PFX; MID = d.MID; LONG = new Set(d.LONG); MAXLEN = d.maxLen;
+        TAGS = new Map(); for (let k = 0; k < d.tags.length; k += 2) TAGS.set(d.tags[k], d.tags[k + 1]);
+        return;
+      }
+      const r = d.tail ? scanTail(d.a, d.b, d.end) : scanFast(d.a, d.b, d.end);
+      r.id = d.id; r.a = d.a; r.end = d.end; r.tail = d.tail;
+      postMessage(r);
+    };
+  `;
+
+  const $ = id => document.getElementById(id);
+  const leftEl = $('left'), keyEl = $('key'), letterEl = $('letter'), countEl = $('count');
+  const liveEl = $('p-live'), nWordsEl = $('nWords'), nRealEl = $('nReal'), rateEl = $('rate');
+  const anPctEl = $('anPct'), anRateEl = $('anRate'), rUpTo = $('rUpTo'), dictInfo = $('dictInfo');
+  const autoBtn = $('autoBtn'), nDistinctEl = $('nDistinct');
+  const rList = $('rList'), rEmpty = $('rEmpty'), rFound = $('rFound'), rSort = $('rSort');
+  const rSearch = $('rSearch'), rMore = $('rMore'), phrList = $('phrList'), phrCount = $('phrCount');
+  const fullEl = $('fullText'), pgInput = $('pgInput'), pgTotal = $('pgTotal'), pgRange = $('pgRange');
+  const followEl = $('follow'), copyBtn = $('copyBtn');
+
+  let count = 0n;                        // pulsaciones totales (BigInt: no tiene límite)
+  let nWords = 0, nReal = 0, nPhrases = 0;
+  const found = new Map();               // clave -> { w, n, first }
+  let longest = { len: 0, pos: -1 }, longestReal = { len: 0, pos: -1 };
+  let topPhrases = [];                   // [nPalabras, inicio, fin, letras]
+  let openRun = [];                      // racha de palabras reales abierta entre trozos
+  let auto = false, raf = null, lastT = 0, debt = 0, rateCount = 0, rateT = 0;
+  let tab = 'live', page = 0n, tA = -1n, tB = -1n, realDirty = true, lastRealRender = 0, listLimit = LIST_STEP;
+
+  const fmt = n => String(typeof n === 'bigint' ? n : Math.floor(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  // Escala larga española: billón = 10^12, trillón = 10^18, cuatrillón = 10^24…
+  const SCALE = [[1e30, 'quintillones'], [1e27, 'mil cuatrillones'], [1e24, 'cuatrillones'], [1e21, 'mil trillones'],
+                 [1e18, 'trillones'], [1e15, 'mil billones'], [1e12, 'billones'], [1e9, 'mil millones']];
+  const big = n => {
+    const x = Number(n);
+    for (const [v, name] of SCALE) if (x >= v) return (x / v).toFixed(2).replace('.', ',') + ' ' + name;
+    return fmt(n);
+  };
+  const phraseText = (a, b) => textAt(a, b).replace(/ +/g, ' ').trim();
+
+  function addTop(n, a, b, L) {
+    const t = topPhrases;
+    if (t.length >= TOP_PHRASES) { const l = t[t.length - 1]; if (L < l[3] || (L === l[3] && n <= l[0])) return; }
+    t.push([n, a, b, L]);
+    t.sort((x, y) => y[3] - x[3] || y[0] - x[0]);
+    if (t.length > TOP_PHRASES) t.pop();
+  }
+
+  // ---- Reparto del trabajo entre núcleos
+  const nThreads = Math.max(1, Math.min(32, (navigator.hardwareConcurrency || 4) - 1));
+  const workers = [];
+  let nextA = 0, tailPending = false, tailSeenEnd = -1, jobId = 0, analyzedTo = 0;
+  const done = new Map();                // a -> resultado (trozos terminados fuera de orden)
+  let anCount = 0, anT = performance.now();
+
+  function startWorkers() {
+    try {
+      const url = URL.createObjectURL(new Blob([WORKER_SRC], { type: 'text/javascript' }));
+      for (let k = 0; k < nThreads; k++) {
+        const w = new Worker(url);
+        w.postMessage({ init: true, seed: SEED, WORD4: DICT.WORD4, PRE4: DICT.PRE4, PFX: DICT.PFX, MID: DICT.MID, LONG: DICT.LONG, maxLen: DICT.maxLen, tags: TAGS_FLAT });
+        w.jobs = 0;
+        w.onmessage = e => onResult(w, e.data);
+        workers.push(w);
+      }
+    } catch (err) { /* sin workers: no se cuentan palabras */ }
+    pump();
+  }
+
+  // Cada núcleo tiene hasta 2 encargos en cola, para no quedarse parado esperando a la página
+  function pump() {
+    for (let round = 0; round < 2; round++) {
+      for (const w of workers) {
+        if (w.jobs > round || tailPending) continue;
+        // los núcleos trabajan con números normales; nunca llegan tan lejos
+        const end = count > 9e15 ? 9e15 : Number(count);
+        if (nextA >= end) return;
+        let b = nextA + CHUNK, tail = false;
+        if (b + MARGIN > end) {
+          if (auto && end - nextA < CHUNK) return;      // aún corriendo: espera a tener un trozo entero
+          if (end === tailSeenEnd) return;              // ese final ya se miró y no ha cambiado
+          b = end; tail = true;
+        }
+        w.jobs++;
+        w.postMessage({ id: ++jobId, a: nextA, b, end, tail });
+        if (tail) tailPending = true; else nextA = b;
+      }
+    }
+  }
+
+  // Une la frase que quedó abierta al final de un trozo con el principio del siguiente
+  function applyEdges(d) {
+    if (d.allReal) {
+      for (const x of d.lead) openRun.push(x);
+      if (openRun.length > 600) openRun = openRun.slice(-600);
+      return;
+    }
+    const arr = openRun.concat(d.lead);
+    if (arr.length >= 9) {
+      const tags = [];
+      for (let k = 0; k < arr.length; k += 3) tags.push(arr[k]);
+      for (const [i, e] of findSentences(tags)) {
+        let L = 0;
+        for (let k = i; k < e; k++) L += arr[3 * k + 2];
+        nPhrases++;
+        addTop(e - i, arr[3 * i + 1], arr[3 * (e - 1) + 1] + arr[3 * (e - 1) + 2], L);
+        realDirty = true;
+      }
+    }
+    openRun = d.trail ? d.trail.slice() : [];
+  }
+
+  function onResult(w, d) {
+    w.jobs--;
+    nWords += d.words;
+    for (let k = 0; k < d.flat.length; k += 3) {
+      const key = d.flat[k], n = d.flat[k + 1], first = d.flat[k + 2];
+      nReal += n;
+      const f = found.get(key);
+      if (f) { f.n += n; if (first < f.first) f.first = first; }
+      else found.set(key, { w: typeof key === 'number' ? dec(key) : key, n, first });
+    }
+    if (d.flat.length) realDirty = true;
+    if (d.maxLen > longest.len) longest = { len: d.maxLen, pos: d.maxPos };
+    if (d.maxRealLen > longestReal.len) longestReal = { len: d.maxRealLen, pos: d.maxRealPos };
+    nPhrases += d.phrases;
+    for (const p of d.top) addTop(p[0], p[1], p[2], p[3]);
+    anCount += d.stop - d.a;
+    if (d.tail) { tailPending = false; nextA = d.stop; tailSeenEnd = d.end; }
+    done.set(d.a, d);
+    while (done.has(analyzedTo)) {
+      const r = done.get(analyzedTo);
+      done.delete(analyzedTo);
+      applyEdges(r);
+      if (r.stop === analyzedTo) break;
+      analyzedTo = r.stop;
+    }
+    pump();
+  }
+
+  function render(ch) {
+    letterEl.classList.remove('idle');
+    letterEl.classList.toggle('space', ch === ' ');
+    letterEl.textContent = ch === ' ' ? '␣' : ch;
+    if (!auto) {
+      keyEl.classList.remove('hit');
+      void keyEl.offsetWidth;
+      keyEl.classList.add('hit');
+    }
+  }
+
+  // Trozo [a, b) del texto con las palabras reales marcadas.
+  // Se miran teclas de más por cada lado para saber si las palabras cortadas son reales.
+  function textHTML(a, b, live) {
+    a = BigInt(a); b = BigInt(b);
+    const total = count, ext = BigInt(Math.max(8, DICT ? DICT.maxLen : 8));
+    const s = a - ext > 0n ? a - ext : 0n, e = b + ext < total ? b + ext : total;
+    const str = textAt(s, e);
+    // trabajamos con desplazamientos normales respecto a s
+    const A = Number(a - s), B = Number(b - s), E = Number(e - s), TOT = total - s, TA = tA - s, TB = tB - s;
+    let html = '', i = 0;
+    while (i < str.length) {
+      if (str[i] === ' ') { if (i >= A && i < B) html += ' '; i++; continue; }
+      let j = i;
+      while (j < str.length && str[j] !== ' ') j++;
+      const lo = Math.max(i, A), hi = Math.min(j, B);
+      if (hi > lo) {
+        const part = str.slice(lo, hi);
+        const w0 = i, w1 = j;
+        const finished = BigInt(w1) < TOT;
+        const cut = (w0 === 0 && s > 0n) || (w1 === E && e < total);
+        if (BigInt(w0) >= TA && BigInt(w0) < TB) html += '<span class="target">' + part + '</span>';
+        else if (!finished && live) html += '<span class="w current">' + part + '</span>';
+        else if (finished && !cut && isWordStr(str.slice(i, j))) html += '<span class="r">' + part + '</span>';
+        else html += part;
+      }
+      i = j;
+    }
+    return html;
+  }
+
+  // ---- Pestaña: en directo
+  function renderLive() {
+    if (!count) { liveEl.innerHTML = '<span class="empty">El mono todavía no ha escrito nada…</span>'; return; }
+    let a = count > LIVE_CHARS ? count - LIVE_CHARS : 0n;
+    if (a > 0n) {   // empieza en palabra entera
+      const pre = textAt(a - 1n, count);
+      let k = 0;
+      while (k < pre.length - 1 && pre[k] !== ' ') k++;
+      a += BigInt(k);
+    }
+    liveEl.innerHTML = '<div class="full live">' + textHTML(a, count, true) + '</div>';
+    liveEl.scrollTop = liveEl.scrollHeight;
+  }
+
+  // ---- Récords y palabra más usada
+  function setRec(id, n, text) {
+    $(id + 'N').textContent = fmt(n);
+    const v = $(id + 'V');
+    if (text) { v.textContent = text; v.classList.remove('none'); }
+  }
+  function renderRecords() {
+    if (longestReal.len) setRec('recReal', longestReal.len, textAt(longestReal.pos, longestReal.pos + longestReal.len));
+    if (topPhrases.length) setRec('recPhr', topPhrases[0][3], phraseText(topPhrases[0][1], topPhrases[0][2]));
+    let bw = null, bn = 0;
+    for (const f of found.values()) if (f.n > bn) { bn = f.n; bw = f.w; }
+    if (bw) { $('topW').textContent = bw; $('topN').textContent = '×' + fmt(bn); }
+  }
+
+  // ---- Pestaña: palabras reales y frases
+  function renderReal() {
+    realDirty = false;
+    lastRealRender = performance.now();
+    nDistinctEl.textContent = fmt(found.size);
+    rFound.textContent = fmt(found.size);
+    phrCount.textContent = fmt(nPhrases);
+    if (tab !== 'real') return;
+    phrList.innerHTML = topPhrases.length ? '' : '<li class="rempty">Todavía ninguna. Son raras: con el mono a toda velocidad sale más o menos una por minuto.</li>';
+    if (topPhrases.length) phrList.innerHTML = topPhrases.map(([n, a, b, L]) =>
+      '<li><button class="rbtn" type="button" data-pa="' + a + '" data-pb="' + b + '">' +
+      '<span class="rw">' + phraseText(a, b) + '</span><span class="rn">' + L + ' letras · ' + n + ' palabras</span></button></li>').join('');
+    const q = rSearch.value.trim().toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    let arr = [...found.values()];
+    if (q) arr = arr.filter(f => f.w.includes(q));
+    const mode = rSort.value;
+    if (mode === 'n') arr.sort((a, b) => b.n - a.n || (a.w < b.w ? -1 : 1));
+    else if (mode === 'len') arr.sort((a, b) => b.w.length - a.w.length || b.n - a.n);
+    else if (mode === 'az') arr.sort((a, b) => (a.w < b.w ? -1 : 1));
+    else arr.sort((a, b) => a.first - b.first);
+    rEmpty.hidden = arr.length > 0;
+    rEmpty.textContent = q ? 'Ninguna palabra encontrada contiene «' + q.replace(/[^A-Z]/g, '') + '».' : 'Aún no ha salido ninguna palabra real.';
+    rMore.hidden = arr.length <= listLimit;
+    rMore.textContent = 'Mostrar más (' + fmt(arr.length - listLimit) + ' restantes)';
+    rList.innerHTML = arr.slice(0, listLimit).map(f =>
+      '<li><button class="rbtn" type="button" data-first="' + f.first + '" title="Ver dónde salió por primera vez">' +
+      '<span class="rw">' + f.w + '</span><span class="rn">×' + fmt(f.n) + '</span></button></li>').join('');
+  }
+
+  // ---- Pestaña: texto completo (regenerado bajo demanda)
+  const pages = () => count > 0n ? (count + PAGE - 1n) / PAGE : 1n;
+  function renderFull() {
+    const total = count, np = pages();
+    if (followEl.checked) page = np - 1n;
+    if (page > np - 1n) page = np - 1n;
+    if (page < 0n) page = 0n;
+    pgTotal.textContent = fmt(np);
+    if (document.activeElement !== pgInput) pgInput.value = String(page + 1n);
+    $('pgFirst').disabled = $('pgPrev').disabled = page === 0n;
+    $('pgNext').disabled = $('pgLast').disabled = page === np - 1n;
+    if (!total) { pgRange.textContent = ''; fullEl.innerHTML = '<span class="empty">El mono todavía no ha escrito nada…</span>'; return; }
+    const a = page * PAGE, b = a + PAGE < total ? a + PAGE : total;
+    pgRange.textContent = 'Pulsaciones ' + fmt(a + 1n) + ' – ' + fmt(b) + ' de ' + fmt(total);
+    fullEl.innerHTML = textHTML(a, b, false);
+  }
+
+  function goPage(p, keepTarget) {
+    followEl.checked = false;
+    page = BigInt(p);
+    if (!keepTarget) tA = tB = -1n;
+    renderFull();
+    if (!keepTarget) $('p-full').scrollTop = 0;
+  }
+  // Salta al texto completo y marca [a, b)
+  function jumpTo(a, b) {
+    tA = BigInt(a); tB = BigInt(b);
+    showTab('full');
+    goPage(tA / PAGE, true);
+    const el = fullEl.querySelector('.target');
+    if (el) el.scrollIntoView({ block: 'center' });
+  }
+
+  let lastLive = 0;
+  function updateFast() {
+    countEl.textContent = big(count);
+    // el texto en directo se repinta como mucho 8 veces por segundo (repintarlo en cada frame daba tirones)
+    const now = performance.now();
+    if (tab === 'live' && (!auto || now - lastLive > 125)) { lastLive = now; renderLive(); }
+  }
+
+  // Lo pesado: unas pocas veces por segundo, corra o no el mono
+  function slowTick() {
+    const now = performance.now();
+    pump();
+    nWordsEl.textContent = big(nWords);
+    nRealEl.textContent = big(nReal);
+    const pct = count ? Math.min(100, analyzedTo / Number(count) * 100) : 100;
+    anPctEl.textContent = (pct >= 99.95 ? '100' : pct.toFixed(pct < 10 ? 2 : 1).replace('.', ',')) + ' %';
+    anRateEl.textContent = big(Math.round(anCount * 1000 / Math.max(1, now - anT)));
+    anCount = 0; anT = now;
+    if (DICT) rUpTo.textContent = workers.length
+      ? 'Contadas hasta la pulsación ' + fmt(analyzedTo) + ' de ' + fmt(count) + ' (' + workers.length + ' núcleos)'
+      : 'Este navegador no permite contar en segundo plano.';
+    renderRecords();
+    if (realDirty && (tab !== 'real' || now - lastRealRender > 1500)) renderReal();
+    if (tab === 'full') renderFull();
+    if (!auto) countEl.textContent = big(count);
+  }
+  setInterval(slowTick, 400);
+
+  function press() {
+    if (auto) return;
+    const ch = charAt(count);
+    count += 1n;
+    render(ch);
+    updateFast();
+    pump();
+  }
+
+  // Modo automático: tan rápido como el ordenador pueda contar (tope: un millón por nanosegundo)
+  function autoStep(t) {
+    if (!auto) return;
+    const dt = Math.min((t - lastT) / 1000, 1);   // si la pestaña se duerme, no recupera de golpe
+    lastT = t;
+    debt += PER_SECOND * dt;
+    let n = Math.floor(debt);
+    debt -= n;
+    // El mono no se adelanta más de lo que los núcleos pueden contar: así se cuenta todo
+    if (workers.length) {
+      const cap = BigInt(analyzedTo + (workers.length * 3 + 2) * CHUNK);
+      if (count + BigInt(n) > cap) { n = cap > count ? Number(cap - count) : 0; debt = 0; }
+    }
+    count += BigInt(n);
+    pump();
+    rateCount += n;
+    if (t - rateT >= 1000) {
+      rateEl.textContent = big(Math.round(rateCount * 1000 / (t - rateT)));
+      rateCount = 0; rateT = t;
+    }
+    if (n) { render(charAt(count - 1n)); updateFast(); }
+    raf = requestAnimationFrame(autoStep);
+  }
+
+  function toggleAuto() {
+    auto = !auto;
+    cancelAnimationFrame(raf);
+    autoBtn.setAttribute('aria-pressed', String(auto));
+    autoBtn.textContent = auto ? 'Parar mono' : 'Mono automático';
+    if (auto) {
+      raf = requestAnimationFrame(t => { lastT = rateT = t; rateCount = 0; debt = 0; raf = requestAnimationFrame(autoStep); });
+    } else {
+      rateEl.textContent = '0';
+      updateFast();
+      slowTick();
+    }
+  }
+
+  function showTab(name) {
+    tab = name;
+    for (const b of document.querySelectorAll('.tab')) b.setAttribute('aria-selected', String(b.dataset.tab === name));
+    for (const p of ['live', 'real', 'full']) $('p-' + p).hidden = p !== name;
+    if (name === 'live') renderLive();
+    if (name === 'real') renderReal();
+    if (name === 'full') renderFull();
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space' && e.target === document.body) {
+      e.preventDefault();
+      if (!e.repeat) press();
+    }
+  });
+  leftEl.addEventListener('click', press);
+  autoBtn.addEventListener('click', toggleAuto);
+  for (const b of document.querySelectorAll('.tab')) b.addEventListener('click', () => showTab(b.dataset.tab));
+  rSort.addEventListener('change', () => { listLimit = LIST_STEP; renderReal(); });
+  rSearch.addEventListener('input', () => { listLimit = LIST_STEP; renderReal(); });
+  rMore.addEventListener('click', () => { listLimit += LIST_STEP; renderReal(); });
+
+  rList.addEventListener('click', e => {
+    const btn = e.target.closest('.rbtn');
+    if (!btn) return;
+    const first = +btn.dataset.first;
+    if (Number.isFinite(first)) jumpTo(first, first + 1);
+  });
+  phrList.addEventListener('click', e => {
+    const btn = e.target.closest('.rbtn');
+    if (btn) jumpTo(+btn.dataset.pa, +btn.dataset.pb);
+  });
+  $('recReal').addEventListener('click', () => { if (longestReal.len) jumpTo(longestReal.pos, longestReal.pos + 1); });
+  $('recPhr').addEventListener('click', () => { if (topPhrases.length) jumpTo(topPhrases[0][1], topPhrases[0][2]); });
+
+  $('pgFirst').addEventListener('click', () => goPage(0n));
+  $('pgPrev').addEventListener('click', () => goPage(page - 1n));
+  $('pgNext').addEventListener('click', () => goPage(page + 1n));
+  $('pgLast').addEventListener('click', () => goPage(pages() - 1n));
+  pgInput.addEventListener('change', () => {
+    const digits = pgInput.value.replace(/\D/g, '');
+    if (digits) goPage(BigInt(digits) - 1n);
+  });
+  followEl.addEventListener('change', () => { if (followEl.checked) { tA = tB = -1n; renderFull(); } });
+
+  copyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(fullEl.textContent);
+      copyBtn.textContent = 'Copiada';
+    } catch (err) {
+      copyBtn.textContent = 'No se pudo copiar';
+    }
+    setTimeout(() => { copyBtn.textContent = 'Copiar página'; }, 1500);
+  });
+
+  // ---- Arranque con el vocabulario (solo palabras comunes del español)
+  const TAGS_FLAT = [];
+  for (const [w, t] of LEX) TAGS_FLAT.push(enc(w), t);
+  DICT = buildDict([]);
+  $('rTotal').textContent = fmt(DICT.size);
+  dictInfo.textContent = 'Vocabulario: ' + fmt(DICT.size) + ' palabras comunes del español (sin tildes, Ñ como N). ' +
+    'Una frase cuenta si tiene sentido: artículo + nombre + verbo (+ complemento), con género y número concordando.';
+  startWorkers();
+
+  renderReal();
+  slowTick();
+}
+</script>
+</body>
+</html>
